@@ -12,8 +12,9 @@ const DELAY_MS = Number(process.env.CRAWL_DELAY_MS || 900);
 const client = axios.create({
   timeout: 25000,
   headers: {
-    "User-Agent": process.env.CRAWLER_USER_AGENT || "Mozilla/5.0 (compatible; GameJobCareerRadar/1.1; +local-use)",
-    "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.7"
+    "User-Agent": process.env.CRAWLER_USER_AGENT || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8"
   }
 });
 
@@ -240,6 +241,11 @@ async function crawl() {
   }
 
   const jobs = [...seen.values()];
+  if (jobs.length === 0) {
+    console.error("No jobs were found! Possible IP block or HTML structure change. Exiting without overwriting.");
+    process.exit(1);
+  }
+  
   await fs.mkdir(path.dirname(OUT), { recursive: true });
   await fs.writeFile(OUT, JSON.stringify({ updatedAt: new Date().toISOString(), count: jobs.length, jobs }, null, 2));
   console.log(`saved ${jobs.length} relevant jobs -> ${OUT}`);
