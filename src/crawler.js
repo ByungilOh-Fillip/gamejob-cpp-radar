@@ -6,7 +6,7 @@ import path from "node:path";
 const BASE = "https://www.gamejob.co.kr";
 const START_URL = process.env.GAMEJOB_LIST_URL || `${BASE}/Recruit/joblist?menucode=duty&duty=18`;
 const OUT = path.resolve("data/jobs.json");
-const MAX_PAGES = Number(process.env.MAX_PAGES || 20);
+const MAX_PAGES = Number(process.env.MAX_PAGES || 30);
 const DELAY_MS = Number(process.env.CRAWL_DELAY_MS || 900);
 
 const client = axios.create({
@@ -19,6 +19,14 @@ const client = axios.create({
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const clean = s => (s || "").replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+const cleanMultiline = s => (s || "").replace(/[ \t\u00a0]+/g, " ").replace(/\n\s*\n+/g, "\n").trim();
+const extractFormattedText = ($, el) => {
+  const clone = $.load($.html(el));
+  clone("style, script").remove();
+  clone("br").replaceWith("\n");
+  clone("p, div, li, dt, dd, tr, h1, h2, h3, h4").each((_, e) => clone(e).append("\n"));
+  return cleanMultiline(clone.text());
+};
 const abs = href => href ? new URL(href, BASE).href : null;
 
 function inferEngine(text) {
@@ -80,8 +88,14 @@ function parseSalary(text) {
 
 function extractBetween(text, start, ends, max = 700) {
   const escaped = ends.map(x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-  const re = new RegExp(`${start}\\s*[:：]?\\s*(.{3,${max}}?)(?=\\s*(?:${escaped})|$)`, "i");
+  const re = new RegExp(`${start}\\s*[:：]?\\s*([\\s\\S]{3,${max}}?)(?=\\s*(?:${escaped})|$)`, "i");
   return clean(text.match(re)?.[1] || "");
+}
+
+function extractBetweenMultiline(text, start, ends, max = 2000) {
+  const escaped = ends.map(x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const re = new RegExp(`${start}\\s*[:：]?\\s*([\\s\\S]{3,${max}}?)(?=\\s*(?:${escaped})|$)`, "i");
+  return cleanMultiline(text.match(re)?.[1] || "");
 }
 
 async function fetchHtml(url) {
@@ -156,15 +170,19 @@ async function crawl() {
             try {
               const ihtml = await fetchHtml(ifurl);
               const i$ = cheerio.load(ihtml);
-              i$("style, script").remove();
-              jdText += " " + clean(i$("body").text());
+              jdText += "\n" + extractFormattedText(i$, i$("body"));
             } catch(e) { }
           }
-          jdText = clean(jdText);
+          
+          let fullJd = cleanMultiline(jdText);
+          const fmtBody = extractFormattedText(d$, d$("body"));
+          if (!fullJd || fullJd.length < 50) {
+            fullJd = extractBetweenMultiline(fmtBody, "담당업무", ["자격조건", "자격요건", "우대사항", "근무지역", "전형절차", "제출서류", "복리후생", "접수안내"], 2000) || fmtBody.substring(0, 2000);
+          }
           
           const bodyText = clean(d$("body").text());
           const keywords = d$("a,span,li,dt,dd").map((_, e) => clean(d$(e).text())).get().filter(x => x.length < 80).slice(0, 160).join(" ");
-          const allText = `${d$("#GA_Part").val() || ""} ${getData("경력")} ${getData("고용형태")} ${bodyText} ${keywords} ${jdText}`;
+          const allText = `${d$("#GA_Part").val() || ""} ${getData("경력")} ${getData("고용형태")} ${bodyText} ${keywords} ${fullJd}`;
           
           const item = {
             id: (url.match(/GI_No=(\d+)/i) || [])[1] || url,
@@ -179,8 +197,8 @@ async function crawl() {
             salary: parseSalary(getData("급여") + " " + bodyText),
             region: reqRegion,
             period: getData("마감일") || extractBetween(bodyText, "접수기간|모집기간", ["지원방법", "전형절차", "제출서류"], 120),
-            process: extractBetween(jdText || bodyText, "전형절차", ["제출서류", "담당자", "접수기간", "근무지역"], 300),
-            jd: jdText.substring(0, 2000),
+            process: extractBetween(fmtBody, "전형절차", ["제출서류", "담당자", "접수기간", "근무지역"], 300) || extractBetween(bodyText, "전형절차", ["제출서류", "담당자", "접수기간", "근무지역"], 300),
+            jd: fullJd.substring(0, 2000),
             fetchedAt: new Date().toISOString()
           };
 
