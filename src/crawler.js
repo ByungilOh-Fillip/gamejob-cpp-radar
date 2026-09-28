@@ -42,12 +42,17 @@ function inferEngine(text) {
 
 function inferRole(text) {
   const t = text.toLowerCase();
+  const ta = /ta|technical\s*artist|테크니컬\s*아티스트/.test(t);
+  const art = /블랜더|블렌더|blender|3ds?\s*max|마야|maya|서브스턴스|substance|페인터|painter/.test(t);
   const engine = /엔진\s*(프로그래머|개발)|engine\s*(programmer|engineer)|engine/.test(t);
   const server = /서버|server|backend|백엔드/.test(t);
   const client = /클라이언트|client|gameplay|게임\s*프로그래머/.test(t);
-  if (engine) return "엔진";
-  if (server && !client) return "서버";
-  if (client) return "클라이언트";
+  
+  if (ta) return "TA (테크니컬 아티스트)";
+  if (art) return "3D 배경/캐릭터/애니메이션";
+  if (engine) return "엔진 프로그래머";
+  if (server && !client) return "서버 프로그래머";
+  if (client) return "클라이언트 프로그래머";
   return "기타";
 }
 
@@ -141,17 +146,23 @@ function nextPageUrl($, currentUrl) {
 }
 
 async function crawl() {
-  console.log(`GameJob crawl start: ${START_URL}`);
+  const startUrls = [
+    START_URL,
+    START_URL.replace("duty=18", "duty=16") // Graphics category
+  ];
+  
   const seen = new Map();
-  const visitedPages = new Set();
-  for (let page = 1; page <= MAX_PAGES; page++) {
+  for (const startUrl of startUrls) {
+    console.log(`GameJob crawl start: ${startUrl}`);
+    const visitedPages = new Set();
+    for (let page = 1; page <= MAX_PAGES; page++) {
     try {
       let html;
-      let pageUrl = START_URL;
+      let pageUrl = startUrl;
       
       if (page > 1) {
         pageUrl = `${BASE}/Recruit/_GI_Job_List`;
-        const u = new URL(START_URL);
+        const u = new URL(startUrl);
         const params = new URLSearchParams(u.search);
         params.set("Page", page);
         html = await fetchHtml(pageUrl, 'post', params.toString());
@@ -224,7 +235,31 @@ async function crawl() {
             fetchedAt: new Date().toISOString()
           };
 
-          if (/\bC\+\+|\bC\/C\+\+|Visual\s*C\+\+|언리얼|Unreal|엔진\s*(프로그래|개발)|클라이언트\s*프로그래|서버\s*프로그래/i.test(allText)) {
+          const devRegex = /\bC\+\+|\bC\/C\+\+|Visual\s*C\+\+|언리얼|Unreal|유니티|Unity|엔진\s*(프로그래|개발)|클라이언트\s*프로그래|서버\s*프로그래/i;
+          const taRegex = /TA|Technical\s*Artist|테크니컬\s*아티스트|블랜더|블렌더|blender|3ds?\s*max|마야|maya|서브스턴스|substance|페인터|painter/i;
+          const engineRegex = /언리얼|Unreal|유니티|Unity/i;
+          
+          item.type = [];
+          
+          // duty=18 (프로그래밍) 이면 for-dev 검사. duty=16 (그래픽) 이면 for-ta 검사
+          const isGraphics = url.includes("duty=16") || startUrl.includes("duty=16");
+          const isProgramming = url.includes("duty=18") || startUrl.includes("duty=18");
+          
+          if (isProgramming) {
+            if (devRegex.test(allText)) item.type.push("for-dev");
+          }
+          if (isGraphics) {
+            // 그래픽 카테고리에서는 TA 키워드나 엔진 키워드가 있으면 TA로 간주
+            if (taRegex.test(allText) || engineRegex.test(allText)) item.type.push("for-ta");
+          }
+          
+          // 안전망: 만약 구분이 안됐다면 키워드로 다시 한번 넣어줌
+          if (item.type.length === 0) {
+            if (devRegex.test(allText) && !taRegex.test(allText)) item.type.push("for-dev");
+            if (taRegex.test(allText)) item.type.push("for-ta");
+          }
+          
+          if (item.type.length > 0) {
             seen.set(url, item);
           }
           await sleep(DELAY_MS);
@@ -238,7 +273,8 @@ async function crawl() {
       console.warn("page failed", page, e.message);
       break;
     }
-  }
+  } // end of page loop
+  } // end of startUrl loop
 
   const jobs = [...seen.values()];
   if (jobs.length === 0) {
