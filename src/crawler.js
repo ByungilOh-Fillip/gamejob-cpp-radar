@@ -271,8 +271,8 @@ async function crawl() {
 
   const jobs = [...seen.values()];
   if (jobs.length === 0) {
-    console.error("No jobs were found! Possible IP block or HTML structure change. Exiting without overwriting.");
-    process.exit(1);
+    console.warn("⚠️ No jobs were found! (Possible IP block by GameJob). Gracefully exiting without overwriting so GitHub Actions can use the fallback data.");
+    return; // exit function successfully, do not write file
   }
   
   
