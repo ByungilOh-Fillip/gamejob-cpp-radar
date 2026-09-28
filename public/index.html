@@ -9,11 +9,16 @@ const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const careerRank=j=>{if(/신입|무관/.test(j.career))return 0;const m=String(j.career).match(/(\d+)/);return m?Number(m[1]):99};
 const salaryMax=j=>Number(j.salary?.max)||0;
 async function load(){
-  const r=await fetch('data/jobs.json'); const d=await r.json(); 
-  const pType = new URLSearchParams(window.location.search).get('type') || 'for-dev';
-  jobs = (d.jobs||[]).filter(j => j.type && j.type.includes(pType));
+  const pType = new URLSearchParams(window.location.search).get('type') || 'dev';
   
-  if (pType === 'for-ta') {
+  // URL에서 type이 for-dev로 들어왔을 경우 dev로 매핑
+  const mode = pType === 'for-dev' ? 'dev' : pType;
+  
+  const r=await fetch(`data/jobs-${mode}.json`); 
+  const d=await r.json(); 
+  jobs = d.jobs||[];
+  
+  if (mode === 'for-ta') {
     document.title = "GameJob TA & Art Radar";
     document.querySelector('.muted').innerHTML = "TA 및 3D Art 직무를 위한<br>신입 · 주니어 채용 탐색기";
     document.querySelector('.top h1').textContent = "TA & Art Career Radar";

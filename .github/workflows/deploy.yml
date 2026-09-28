@@ -30,15 +30,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run Crawler
-        run: npm run crawl:once
+      - name: Run Crawler (Dev)
+        run: npm run crawl:dev
         env:
-          MAX_PAGES: 30 # 충분한 수집을 위해 30페이지로 증가
+          MAX_PAGES: 30
+
+      - name: Run Crawler (TA)
+        run: npm run crawl:ta
+        env:
+          MAX_PAGES: 30
 
       - name: Prepare static files
         run: |
           mkdir -p public/data
-          cp data/jobs.json public/data/jobs.json
+          cp data/jobs-dev.json public/data/jobs-dev.json
+          cp data/jobs-for-ta.json public/data/jobs-for-ta.json
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

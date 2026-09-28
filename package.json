@@ -3,7 +3,9 @@
   "version": "1.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "predev": "node src/bootstrap.js",
     "dev": "node --watch src/server.js",
@@ -11,7 +13,9 @@
     "start": "node src/server.js",
     "precrawl": "node src/bootstrap.js",
     "crawl": "node src/crawler.js",
-    "crawl:once": "node src/crawler.js --once"
+    "crawl:once": "node src/crawler.js --once",
+    "crawl:dev": "MODE=dev node src/crawler.js --once",
+    "crawl:ta": "MODE=for-ta node src/crawler.js --once"
   },
   "dependencies": {
     "axios": "^1.8.4",
