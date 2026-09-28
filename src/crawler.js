@@ -44,7 +44,7 @@ function inferRole(text) {
   const t = text.toLowerCase();
   
   if (isTA) {
-    const ta = /ta|technical\s*artist|테크니컬\s*아티스트/.test(t);
+    const ta = /\bta\b|technical\s*artist|테크니컬\s*아티스트/.test(t);
     const art = /블랜더|블렌더|blender|3ds?\s*max|마야|maya|서브스턴스|substance|페인터|painter|모델링|modeling/.test(t);
     const fx = /이펙트|effect|fx/.test(t);
     const anim = /애니메이터|애니메이션|animator|animation/.test(t);
@@ -244,7 +244,7 @@ async function crawl() {
           };
 
           const devRegex = /\bC\+\+|\bC\/C\+\+|Visual\s*C\+\+|언리얼|Unreal|엔진\s*(프로그래|개발)|클라이언트\s*프로그래|서버\s*프로그래/i;
-          const taRegex = /TA|Technical\s*Artist|테크니컬\s*아티스트|블랜더|블렌더|blender|3ds?\s*max|마야|maya|서브스턴스|substance|페인터|painter|모델링|modeling|언리얼|Unreal|유니티|Unity/i;
+          const taRegex = /\bTA\b|Technical\s*Artist|테크니컬\s*아티스트|블랜더|블렌더|blender|3ds?\s*max|마야|maya|서브스턴스|substance|페인터|painter|모델링|modeling|언리얼|Unreal|유니티|Unity/i;
           const engineRegex = /언리얼|Unreal|유니티|Unity/i;
           
           if (isTA) {
