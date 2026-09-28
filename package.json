@@ -1,0 +1,21 @@
+{
+  "name": "gamejob-cpp-career-radar",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "predev": "node src/bootstrap.js",
+    "dev": "node --watch src/server.js",
+    "prestart": "node src/bootstrap.js",
+    "start": "node src/server.js",
+    "precrawl": "node src/bootstrap.js",
+    "crawl": "node src/crawler.js",
+    "crawl:once": "node src/crawler.js --once"
+  },
+  "dependencies": {
+    "axios": "^1.8.4",
+    "cheerio": "^1.0.0",
+    "express": "^5.1.0"
+  }
+}

@@ -1,0 +1,53 @@
+name: Deploy GameJob Radar to GitHub Pages
+
+on:
+  schedule:
+    - cron: '0 21 * * *' # Runs at 06:00 KST (21:00 UTC) every day
+  workflow_dispatch: # Allows manual triggering from the Actions tab
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  crawl-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Crawler
+        run: npm run crawl:once
+        env:
+          MAX_PAGES: 10 # 10페이지 정도만 수집 (수정 가능)
+
+      - name: Prepare static files
+        run: |
+          mkdir -p public/data
+          cp data/jobs.json public/data/jobs.json
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './public'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
