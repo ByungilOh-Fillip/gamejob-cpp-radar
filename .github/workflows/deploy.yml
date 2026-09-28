@@ -33,7 +33,7 @@ jobs:
       - name: Run Crawler
         run: npm run crawl:once
         env:
-          MAX_PAGES: 10 # 10페이지 정도만 수집 (수정 가능)
+          MAX_PAGES: 30 # 충분한 수집을 위해 30페이지로 증가
 
       - name: Prepare static files
         run: |
