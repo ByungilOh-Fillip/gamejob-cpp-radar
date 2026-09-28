@@ -42,18 +42,26 @@ function inferEngine(text) {
 
 function inferRole(text) {
   const t = text.toLowerCase();
-  const ta = /ta|technical\s*artist|테크니컬\s*아티스트/.test(t);
-  const art = /블랜더|블렌더|blender|3ds?\s*max|마야|maya|서브스턴스|substance|페인터|painter/.test(t);
-  const engine = /엔진\s*(프로그래머|개발)|engine\s*(programmer|engineer)|engine/.test(t);
-  const server = /서버|server|backend|백엔드/.test(t);
-  const client = /클라이언트|client|gameplay|게임\s*프로그래머/.test(t);
   
-  if (ta) return "TA (테크니컬 아티스트)";
-  if (art) return "3D 배경/캐릭터/애니메이션";
-  if (engine) return "엔진 프로그래머";
-  if (server && !client) return "서버 프로그래머";
-  if (client) return "클라이언트 프로그래머";
-  return "기타";
+  if (isTA) {
+    const ta = /ta|technical\s*artist|테크니컬\s*아티스트/.test(t);
+    const art = /블랜더|블렌더|blender|3ds?\s*max|마야|maya|서브스턴스|substance|페인터|painter|모델링|modeling/.test(t);
+    const fx = /이펙트|effect|fx/.test(t);
+    const anim = /애니메이터|애니메이션|animator|animation/.test(t);
+    
+    if (ta) return "TA (테크니컬 아티스트)";
+    if (art || anim || fx) return "3D 배경/캐릭터/애니메이션";
+    return "기타 아트/그래픽";
+  } else {
+    const engine = /엔진\s*(프로그래머|개발)|engine\s*(programmer|engineer)|engine/.test(t);
+    const server = /서버|server|backend|백엔드/.test(t);
+    const client = /클라이언트|client|gameplay|게임\s*프로그래머/.test(t);
+    
+    if (engine) return "엔진 프로그래머";
+    if (server && !client) return "서버 프로그래머";
+    if (client) return "클라이언트 프로그래머";
+    return "기타 개발";
+  }
 }
 
 function inferCareer(text) {
