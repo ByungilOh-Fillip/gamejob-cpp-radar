@@ -98,9 +98,19 @@ function extractBetweenMultiline(text, start, ends, max = 2000) {
   return cleanMultiline(text.match(re)?.[1] || "");
 }
 
-async function fetchHtml(url) {
+async function fetchHtml(url, method = 'get', postData = null) {
   for (let attempt = 1; attempt <= 3; attempt++) {
-    try { return (await client.get(url)).data; }
+    try {
+      if (method === 'post') {
+        return (await client.post(url, postData, {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "X-Requested-With": "XMLHttpRequest"
+          }
+        })).data;
+      }
+      return (await client.get(url)).data;
+    }
     catch (e) {
       if (attempt === 3) throw e;
       await sleep(1200 * attempt);
@@ -133,21 +143,32 @@ async function crawl() {
   console.log(`GameJob crawl start: ${START_URL}`);
   const seen = new Map();
   const visitedPages = new Set();
-  let pageUrl = START_URL;
-
-  for (let page = 1; page <= MAX_PAGES && pageUrl; page++) {
-    if (visitedPages.has(pageUrl)) break;
-    visitedPages.add(pageUrl);
+  for (let page = 1; page <= MAX_PAGES; page++) {
     try {
-      const html = await fetchHtml(pageUrl);
+      let html;
+      let pageUrl = START_URL;
+      
+      if (page > 1) {
+        pageUrl = `${BASE}/Recruit/_GI_Job_List`;
+        const u = new URL(START_URL);
+        const params = new URLSearchParams(u.search);
+        params.set("Page", page);
+        html = await fetchHtml(pageUrl, 'post', params.toString());
+      } else {
+        html = await fetchHtml(pageUrl);
+      }
+
       const $ = cheerio.load(html);
       const links = detailLinks($);
       console.log(`page ${page}: ${links.size} detail links → ${pageUrl}`);
 
       if (!links.size) break;
 
+      let linkCount = 0;
       for (const url of links) {
         if (seen.has(url)) continue;
+        linkCount++;
+        if (linkCount % 10 === 0) console.log(`  fetching details ${linkCount}/${links.size}...`);
         try {
           const dhtml = await fetchHtml(url);
           const d$ = cheerio.load(dhtml);
@@ -211,9 +232,6 @@ async function crawl() {
         }
       }
 
-      const next = nextPageUrl($, pageUrl);
-      if (!next || next === pageUrl) break;
-      pageUrl = next;
       await sleep(DELAY_MS);
     } catch (e) {
       console.warn("page failed", page, e.message);
